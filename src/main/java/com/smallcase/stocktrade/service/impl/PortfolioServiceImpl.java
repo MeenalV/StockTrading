@@ -27,6 +27,8 @@ import org.springframework.util.CollectionUtils;
 public class PortfolioServiceImpl implements PortfolioService {
 
   private final PortfolioRepository portfolioRepository;
+
+  /** Here we dont want to pass the sensitive data, and hence we change the data to DTO for others to consume. */
   @Override
   public List<PortfolioTradesDTO> getPortfolioTrades(Long custId)
       throws ValidationException, DataNotFoundException {
@@ -43,6 +45,7 @@ public class PortfolioServiceImpl implements PortfolioService {
     }
   }
 
+  /** Returns are calculated as summation of all the securities (avgPrice-currentPrice)* num of stocks they have for the security*/
   @Override
   public ReturnsDTO getReturns(Long custId) throws DataNotFoundException, ValidationException {
     List<PortfolioTradesDTO> portfolioTradesDTOS = getPortfolioTrades(custId);
