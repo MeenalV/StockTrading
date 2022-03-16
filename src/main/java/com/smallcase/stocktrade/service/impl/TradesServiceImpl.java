@@ -42,6 +42,10 @@ public class TradesServiceImpl implements TradesService {
   private final TradeRepository tradeRepository;
   private final TradeHistoryRepository tradeHistoryRepository;
 
+  /** Here we create new trade. now when we create new trade, we cannot have a tradeId, hence the validation
+   * is necessity.
+   * By just creating a trade for the first time will lead to creating portfolio from here.
+   * after this, any trade made by the user will be added to this portfolio. */
   @Override
   public TradeResponseDTO createNewTrade(Long custId, TradeRequestDTO tradeRequestDTO)
       throws ValidationException, InvalidActionException {
@@ -75,6 +79,7 @@ public class TradesServiceImpl implements TradesService {
 
       portfolio = portfolioRepository.save(portfolio);
 
+      /** Every transaction is recorded in Trade History. Trade has the calculated values after a trade takes place*/
       TradeHistory tradeHistory = new TradeHistory();
       saveTradeAuditData(trade, portfolio, tradeRequestDTO.getTradeType(), Action.CREATED,
           tradeRequestDTO, tradeHistory);
@@ -83,6 +88,11 @@ public class TradesServiceImpl implements TradesService {
     }
   }
 
+  /** after placing a trade, there is high chance that user wants to modify the trade.
+   * This function helps consumer to modify the trade request and accordingly receive
+   * the new data and update the portfolio.
+   * Here, trade Id is very important, otherwise how can one update the trade?
+   * */
   @Override
   public TradeResponseDTO updateTrade(Long custId, TradeRequestDTO tradeRequestDTO)
       throws ValidationException, InvalidActionException {
@@ -102,10 +112,13 @@ public class TradesServiceImpl implements TradesService {
         createTradeRequestDTOFromHistory(tradeRequestDTO1, tradeHistory);
         createTradeDataFromRequest(tradeRequestDTO1, custId, tradeResponseDTO);
 
-        /** Making the changes with the new update here*/
+        /** Making the changes with the new updated request here*/
         Trade trade = createTradeDataFromRequest(tradeRequestDTO, custId, tradeResponseDTO);
         Optional<Portfolio> portfolioGet = portfolioRepository.findById(
             tradeHistory.getPortfolioId());
+        /** In case with the updated request, a person adds a new security to his portfolio,
+         * then that trade data is not present in portfolio, and hence to link that trade to portfolio,
+         * we assign portfolio id here to the trade.*/
         if (portfolioGet.isPresent()) {
           trade.setPortfolio(portfolioGet.get());
         } else {
@@ -122,6 +135,9 @@ public class TradesServiceImpl implements TradesService {
     }
   }
 
+  /** If the user wants to remove a trade, or cancel the trade that occurred, they can delete it.
+   * This will remove the trade, and with this it will update the portfolio to the state where this trade
+   * didnt even take place.*/
   @Override
   public Boolean deleteTrade(Long custId, Long tradeId)
       throws ValidationException, InvalidActionException {
@@ -151,6 +167,8 @@ public class TradesServiceImpl implements TradesService {
       }
   }
 
+  /** Here we show all the trades that occurred for the securities in the portfolio.
+   * this gives an overall view of the trades executed or removed. */
   @Override
   public Map<String, List<TradeHistory>> getAllTrades(Long custId) throws DataNotFoundException {
     Optional<List<TradeHistory>> tradeHistoriesGet = tradeHistoryRepository.findByCustomerId(custId);
@@ -179,6 +197,7 @@ public class TradesServiceImpl implements TradesService {
     }
   }
 
+  /** this function simply converts the request values to trade history model to maintain the trades that happened*/
   private void saveTradeAuditData(Trade trade, Portfolio portfolio, TradeType tradeType,
       Action action, TradeRequestDTO tradeRequestDTO,
       TradeHistory tradeHistory) {
@@ -197,6 +216,8 @@ public class TradesServiceImpl implements TradesService {
     tradeHistoryRepository.save(tradeHistory);
   }
 
+  /** After saving all the changes made in the trade, we need to send data to consumer to use.
+   * Here we map them to user readable POJO.*/
   private void createTradeResponseDTO(Trade trade, TradeResponseDTO tradeResponseDTO,
       TradeRequestDTO tradeRequestDTO, TradeHistory tradeHistory) {
     tradeResponseDTO.setTradeType(tradeRequestDTO.getTradeType());
@@ -209,6 +230,10 @@ public class TradesServiceImpl implements TradesService {
     tradeResponseDTO.setNewSharesCount(trade.getShares());
   }
 
+  /** Using the requestDTO, we need to map it to our model, and this is done here.
+   * Whenever a trade takes place, it changes the portfolio data, either by adding new security, or adding shares
+   * to the security, or selling the shares. This needs to be calculated and saved.
+   * This function creates the model data here. */
   private Trade createTradeDataFromRequest(TradeRequestDTO tradeRequestDTO, Long custId,
       TradeResponseDTO tradeResponseDTO)
       throws InvalidActionException {
@@ -233,6 +258,13 @@ public class TradesServiceImpl implements TradesService {
     return trade;
   }
 
+  /** Using the requestDTO, we need to map it to our model, and this is done here.
+   * Whenever a trade takes place, it changes the portfolio data, either by adding new security, or adding shares
+   * to the existing security, or selling the shares (a portfolio). This needs to be calculated and saved.
+   * This function calculates the prices and saves the data.
+   * It also assigns data for Customer to consume.
+   * Given the transaction, if somehow my shares touch zero, we mark the trade as false, because we dont have
+   * shares in the security, and hence they should not be shown in the portfolio. */
   private void updateShareValues(Trade trade, TradeRequestDTO tradeRequestDTO,
       TradeResponseDTO tradeResponseDTO)
       throws InvalidActionException {

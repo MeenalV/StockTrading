@@ -27,6 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
  * @author Meenal created on 15/03/22 at 12:28 AM
  **/
 
+
+/** In this controller, all the individual trade related actions take place.
+ * Placing trade, Updating Trade, Removing a Trade and getting all the trades.*/
 @RequiredArgsConstructor
 @Slf4j
 @RestController
