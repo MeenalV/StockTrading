@@ -77,7 +77,9 @@ public class PortfolioServiceImpl implements PortfolioService {
         portfolioTradesDTOS.add(portfolioTradesDTO);
       }
     }
-
+    if(CollectionUtils.isEmpty(portfolioTradesDTOS)){
+      throw new DataNotFoundException("No active trades exist for this portfolio", 1011);
+    }
     return portfolioTradesDTOS;
   }
 }

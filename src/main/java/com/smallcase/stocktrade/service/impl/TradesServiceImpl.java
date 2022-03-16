@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 /**
  * @author Meenal created on 15/03/22 at 1:35 AM
@@ -142,7 +143,7 @@ public class TradesServiceImpl implements TradesService {
           createTradeRequestDTOFromHistory(tradeRequestDTO, tradeHistory);
           
           updateShareValues(trade, tradeRequestDTO, tradeResponseDTO);
-          
+
           tradeRepository.save(trade);
           tradeHistoryRepository.save(tradeHistory);
           return Boolean.TRUE;
@@ -157,7 +158,9 @@ public class TradesServiceImpl implements TradesService {
       throw new DataNotFoundException("No trades made by the user", 1010);
     } else {
       List<TradeHistory> tradeHistories = tradeHistoriesGet.get();
-
+      if(CollectionUtils.isEmpty(tradeHistories)){
+        throw new DataNotFoundException("No trades made by the user", 1010);
+      }
       Map<String, List<TradeHistory>> trades = tradeHistories.stream()
           .collect(Collectors.groupingBy(TradeHistory::getTickerSymbol,Collectors.toList()));
 
@@ -253,6 +256,10 @@ public class TradesServiceImpl implements TradesService {
 
       trade.setShares(totalShares);
       trade.setAvgSharePrice(newAvgPrice);
+    }
+
+    if(trade.getShares() == 0){
+      trade.setActive(Boolean.FALSE);
     }
   }
 }

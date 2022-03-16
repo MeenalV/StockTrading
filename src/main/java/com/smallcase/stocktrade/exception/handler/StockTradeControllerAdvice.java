@@ -29,7 +29,7 @@ public class StockTradeControllerAdvice extends ResponseEntityExceptionHandler {
     WSError wsError = new WSError();
     wsError.setMessage(ex.getMessage());
     wsError.setCode(ex.getCode());
-    return ResponseEntity.noContent().build();
+    return ResponseEntity.badRequest().body(wsError);
   }
 
   @ExceptionHandler(value = {InvalidActionException.class})
